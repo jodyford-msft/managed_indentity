@@ -1,0 +1,49 @@
+name: Deploy Bicep Template
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+
+    - name: Collect Azure Regions
+      run: |
+        regions=$(az account list-locations --query "[].name" -o tsv)
+        echo "regions=$regions" >> $GITHUB_ENV
+
+    - name: Set up Azure CLI
+      uses: azure/CLI@v1
+      with:
+        azcliversion: 2.25.0
+
+    - name: Deploy Bicep Template
+      run: |
+          regions=$(cat regions.txt)
+          repo_url="https://github.com/${{ github.repository }}"
+          github_token="${{ secrets.GITHUB_TOKEN }}"
+          az deployment group create \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --template-file main.bicep \
+            --parameters validRegions="${{ env.regions }}" \
+                        adminUsername=${{ secrets.ADMIN_USERNAME }} \
+                        adminPassword=${{ secrets.ADMIN_PASSWORD }} \
+                        repoUrl=$repo_url \
+                        githubToken=$github_token \
+            --mode Complete
+    
+    - name: Check Database
+      run: |
+        sql_server_name=${{ secrets.SQL_SERVER_NAME }}
+        database_name='adventureworks'
+        az sql db show --server $sql_server_name --name $database_name --resource-group ${{ secrets.RESOURCE_GROUP }}
