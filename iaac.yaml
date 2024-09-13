@@ -16,6 +16,16 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    - name: Set Azure Context to Specific Tenant
+      run: |
+        az account set --tenant ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Get Subscription ID
+      id: get-subscription
+      run: |
+        subscription_id=$(az account show --query id -o tsv)
+        echo "SUBSCRIPTION_ID=$subscription_id" >> $GITHUB_ENV
+
 
     - name: Collect Azure Regions
       run: |
